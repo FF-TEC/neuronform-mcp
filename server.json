@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.neuronform/mcp",
+  "title": "NeuronForm 3D map models",
+  "description": "Design 3D-printable multi-colour map models from OpenStreetMap data, render them, and share them.",
+  "version": "0.1.0",
+  "websiteUrl": "https://neuronform.com/agents/en",
+  "repository": {
+    "url": "https://github.com/FF-TEC/neuronform-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://neuronform.com/icon-512.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://neuronform.com/mcp"
+    }
+  ]
+}
