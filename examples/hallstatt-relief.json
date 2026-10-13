@@ -1,0 +1,19 @@
+{
+  "title": "Relief model of Hallstatt",
+  "prompt": {
+    "en": "Create a 3 km wide hexagonal relief model of Hallstatt with 1.5-fold exaggeration and show it to me in 3D.",
+    "de": "Erstelle ein 3 km breites, sechseckiges Reliefmodell von Hallstatt mit 1,5-facher Überhöhung und zeig es mir in 3D."
+  },
+  "brief": {
+    "place": "Hallstatt",
+    "width": 3000,
+    "shape": "hexagon",
+    "relief": true,
+    "exaggeration": 1.5
+  },
+  "steps": [
+    { "tool": "create_design", "arguments": {} },
+    { "tool": "render_design", "arguments": {} }
+  ],
+  "start_link": "https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5"
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Wall map of Salzburg with a highlighted street",
+  "prompt": {
+    "en": "Build a wall map of Salzburg from three hexagonal tiles, add an integrated frame, and highlight the Getreidegasse in red.",
+    "de": "Baue eine Wandkarte von Salzburg aus drei sechseckigen Kacheln, füge einen integrierten Rahmen hinzu und hebe die Getreidegasse rot hervor."
+  },
+  "brief": {
+    "place": "Altstadt, Salzburg",
+    "width": 1500,
+    "shape": "hexagon",
+    "tiles": 3,
+    "frame": "integrated"
+  },
+  "steps": [
+    { "tool": "create_design", "arguments": {} },
+    {
+      "tool": "find_map_elements",
+      "arguments": { "kind": "line", "name": "Getreidegasse" },
+      "then": "Append each returned fragment to its target customizations.custom_lines.paths; the fragments carry the colour D8493F (red)."
+    },
+    { "tool": "validate_design", "arguments": {} },
+    { "tool": "render_design", "arguments": {} },
+    { "tool": "share_design", "arguments": {} }
+  ],
+  "start_link": "https://neuronform.com/map/app?place=Altstadt%2C%20Salzburg&width=1500&shape=hexagon&tiles=3&frame=integrated",
+  "start_link_note": "The start link carries the brief only; the highlighted street needs the MCP tools or the configurator."
+}

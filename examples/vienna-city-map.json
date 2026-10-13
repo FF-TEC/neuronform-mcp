@@ -1,0 +1,20 @@
+{
+  "title": "Two-colour city map of central Vienna",
+  "prompt": {
+    "en": "Make a square city map of central Vienna, 2 km wide, in two colours, with the edge text 'Wien', and give me a link to open it in the configurator.",
+    "de": "Mach eine quadratische Stadtkarte der Wiener Innenstadt, 2 km breit, in zwei Farben, mit der Kantenschrift 'Wien', und gib mir einen Link zum Öffnen im Konfigurator."
+  },
+  "brief": {
+    "place": "Innere Stadt, Wien",
+    "width": 2000,
+    "shape": "square",
+    "colors": "two",
+    "label": "Wien"
+  },
+  "steps": [
+    { "tool": "create_design", "arguments": {} },
+    { "tool": "render_design", "arguments": {} },
+    { "tool": "share_design", "arguments": {} }
+  ],
+  "start_link": "https://neuronform.com/map/app?place=Innere%20Stadt%2C%20Wien&width=2000&shape=square&colors=two&label=Wien"
+}
