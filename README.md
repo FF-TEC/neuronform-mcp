@@ -224,10 +224,10 @@ A request contains the tool arguments, such as the place and the design, and
 the IP address of the calling system: the platform of the chat for Claude or
 ChatGPT, the user's own computer for Claude Code, Cursor, or VS Code.
 NeuronForm receives no account data and no other content of the chat. Place
-searches are answered by the place directory of the NeuronForm server or,
-depending on its setting, by an external place search service, which the
-privacy policy names. The providers of the assistants are responsible for
-the chat contents on their platforms.
+searches are answered by the place directory of the NeuronForm server, which
+it builds from OpenStreetMap data; the search terms reach no further service.
+The providers of the assistants are responsible for the chat contents on
+their platforms.
 
 - Privacy policy: [English](https://neuronform.com/privacy/en#agents), [Deutsch](https://neuronform.com/privacy/de#agents)
 - Terms, section on AI agents: [English](https://neuronform.com/terms/en#agents), [Deutsch](https://neuronform.com/terms/de#agents)
