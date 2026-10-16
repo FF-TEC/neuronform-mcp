@@ -224,26 +224,28 @@ A request contains the tool arguments, such as the place and the design, and
 the IP address of the calling system: the platform of the chat for Claude or
 ChatGPT, the user's own computer for Claude Code, Cursor, or VS Code.
 NeuronForm receives no account data and no other content of the chat. Place
-searches go from the NeuronForm server to Nominatim of the OpenStreetMap
-Foundation. The providers of the assistants are responsible for the chat
-contents on their platforms.
+searches are answered by the place directory of the NeuronForm server or,
+depending on its setting, by an external place search service, which the
+privacy policy names. The providers of the assistants are responsible for
+the chat contents on their platforms.
 
 - Privacy policy: [English](https://neuronform.com/privacy/en#agents), [Deutsch](https://neuronform.com/privacy/de#agents)
 - Terms, section on AI agents: [English](https://neuronform.com/terms/en#agents), [Deutsch](https://neuronform.com/terms/de#agents)
 
 ## Map data and attribution
 
-Every image and every result of the server carries the attribution of its
-data:
+The service names its data sources from one data source registry. Every
+result of `render_design` carries, in the field `attribution`, the
+attribution lines of the data sources of its model in the language of the
+call, and its image carries the lines of the map data and terrain sources;
+the sea-floor depths are named exactly when the model contains them. Keep the
+attribution when you show or publish images of a design.
 
-```
-Map data © OpenStreetMap contributors, ODbL 1.0 · Contains modified Copernicus DEM data
-```
+The registry lists every source with its role, attribution line, licence,
+the notice its licence requires, and its citation:
 
-The map data comes from [OpenStreetMap](https://www.openstreetmap.org/copyright)
-under the Open Database License (ODbL) 1.0. Keep the attribution when you
-show or publish images of a design. The licenses of all data sources are
-listed at [neuronform.com/licenses/en](https://neuronform.com/licenses/en).
+- as JSON: [neuronform.com/map/api/v1/data-sources](https://neuronform.com/map/api/v1/data-sources)
+- as a page: [neuronform.com/licenses/en](https://neuronform.com/licenses/en)
 
 ## MCP registry
 
@@ -287,4 +289,4 @@ mit einem eigenen Konto.
   - Besucherinnen und Besucher der Website haben Vorrang.
   - Modelle über etwa einer Million Dreiecken werden für Agenten nicht berechnet.
 - **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Verkaufsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
-- **Kartendaten:** © OpenStreetMap-Mitwirkende (ODbL 1.0); enthält modifizierte Copernicus-DEM-Daten.
+- **Kartendaten und Quellen:** Jedes Ergebnis von `render_design` trägt im Feld `attribution` die Namensnennung der Datenquellen seines Modells, das Bild die der Karten- und Geländedaten. Alle Quellen mit Lizenz, Hinweis und Zitat listet das Quellenverzeichnis des Dienstes: [als JSON](https://neuronform.com/map/api/v1/data-sources) und auf der Seite [Lizenzen und Attribution](https://neuronform.com/licenses/de).
