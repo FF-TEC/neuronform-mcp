@@ -122,11 +122,12 @@ is the complete design JSON; its schema is the resource
 | --- | --- | --- | --- |
 | `search_places` | Finds places and addresses; returns name, lat, lon, and kind of each candidate | `query`, `limit` (1 to 10) | yes |
 | `create_design` | Compiles a short brief into a complete design with the configurator defaults; invalid values fall back to their defaults with a notice | `brief` | yes |
+| `edit_design` | Changes a design with brief fields (`changes`) and JSON Patch operations `add`, `replace`, `remove` (`patch`, at most 100) and returns the changed design; the service stores no design, so every call carries the complete design | `design`, `changes`, `patch` | yes |
 | `get_design_guide` | Explains one topic of the design JSON with the JSON schema of its fields | `topic` | yes |
 | `find_map_elements` | Lists roads and paths, buildings, areas, or ground regions of the design with a ready-to-insert fragment and its target path | `design`, `kind`, `name`, `class`, `near`, `limit`, `tile` | yes |
 | `edit_tiles` | Adds a tile at a compass side of a tile, or removes the tile there, and returns the changed design | `design`, `action`, `tile`, `direction` | yes |
-| `validate_design` | Checks a design against the request rules, the limits of anonymous use, and the restricted areas without generating it | `design` | yes |
-| `render_design` | Renders a PNG of 1600 × 800 pixels with an oblique view and a top view, returns a summary with dimensions, triangles, and colour groups, and opens the 3D viewer where the host supports MCP Apps | `design` | yes |
+| `validate_design` | Checks a design against the request rules, the limits of anonymous use, and the restricted areas without generating it, and lists every tile with its centre and its free edges | `design` | yes |
+| `render_design` | Renders a JPEG of 1600 × 800 pixels with views from the north, east, south, and west beside the top view, or one view of 800 × 800 pixels (`view` `top` or `oblique` with `direction`), twice the size with `resolution` `high`; returns a summary with dimensions, triangles, colour groups, and tile positions, and opens the 3D viewer where the host supports MCP Apps | `design`, `view`, `direction`, `resolution` | yes |
 | `share_design` | Stores the design as an anonymous snapshot and returns a link, valid for 90 days, that opens it in the configurator | `design` | no (creates a snapshot, deletes nothing) |
 | `list_templates` | Lists the gallery templates; with a slug it returns the design of that template | `slug` | yes |
 
@@ -149,7 +150,7 @@ required.
 | `rotation` | Clockwise rotation in degrees, −360 to 360 | 0 |
 | `tiles` | Tile count, arranged compactly around the first tile; at most 3 for agents | 1 |
 | `model_width` | Printed width of one tile in millimetres, 50 to 300 | 200 |
-| `colors` | Colour template `single`, `two`, `four` | `four` |
+| `colors` | Colour template `single`, `two`, `four`, or an object with an optional `template` and colours `RRGGBB` by group (`ground`, `green`, `water`, `traffic`), layer kind, `frame`, or `label` | `four` |
 | `relief` | `true` real relief, `false` flat | automatic (flat below 300 m elevation difference) |
 | `exaggeration` | Vertical exaggeration, 0.1 to 10 | 1 |
 | `frame` | `none`, `integrated`, `separate` | `none` |
@@ -158,10 +159,11 @@ required.
 ### Workflow
 
 1. `search_places` finds the place; `create_design` turns a brief into a
-   complete design.
-2. The agent changes the design JSON directly; `edit_tiles` adds or removes
-   tiles, and `find_map_elements` returns ready-to-insert roads, buildings,
-   areas, and ground regions.
+   complete design. The centre of the brief is the centre of tile 0.
+2. `edit_design` changes brief fields and patches every other field;
+   `edit_tiles` adds or removes tiles at the free edges that
+   `validate_design` lists, and `find_map_elements` returns ready-to-insert
+   roads, buildings, areas, and ground regions.
 3. `validate_design` checks a changed design without generating it.
 4. `render_design` shows the design as an image and an interactive 3D view.
 5. `share_design` returns the link for the user.
@@ -277,7 +279,7 @@ mit einem eigenen Konto.
 
 - **MCP-Adresse:** `https://neuronform.com/mcp` (Streamable HTTP, ohne Konto, ohne API-Schlüssel, kostenlos).
 - **Einrichtung:** In Claude unter „Customize“ › „Connectors“ › „+ Add“ › „Add custom connector“ mit „No sign in“. In Claude Code mit `claude mcp add --transport http neuronform https://neuronform.com/mcp`. Für ChatGPT, Cursor und VS Code siehe die Abschnitte oben oder die Seite [Für KI-Agenten](https://neuronform.com/agents/de).
-- **Werkzeuge:** `search_places`, `create_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`).
+- **Werkzeuge:** `search_places`, `create_design`, `edit_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`).
 - **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`
 - **Grenzen:**
   - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln).
