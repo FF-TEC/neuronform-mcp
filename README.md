@@ -3,8 +3,9 @@
 NeuronForm turns OpenStreetMap data into print-ready, multi-colour 3D map
 models. Its public MCP server lets AI assistants such as Claude or ChatGPT
 design these models in a chat: find a place, create and change a design,
-show it as an image and a rotatable 3D view, and hand the user a link that
-opens exactly that design in the NeuronForm configurator.
+show it as an image and, where the chat supports it, as a rotatable 3D view,
+and hand the user a link that opens exactly that design in the NeuronForm
+configurator.
 
 This repository holds the documentation of the server, example briefs with
 the prompts that produce them, and the `server.json` for the MCP registry.
@@ -23,8 +24,9 @@ https://neuronform.com/mcp
 | Transport | Streamable HTTP, stateless (one JSON response per request, no session) |
 | Authentication | none; no account, no API key |
 | Cost | free of charge |
-| Server name | `NeuronForm` |
+| Server name | `NeuronForm`, title “NeuronForm 3D map models” |
 | MCP Apps | extension `io.modelcontextprotocol/ui`; the 3D viewer is the resource `ui://neuronform/viewer` |
+| Resources | the viewer, the design schema `neuronform://schema/design`, and one guide `neuronform://guide/{topic}` per topic of `get_design_guide` |
 
 Agents never export print files and never buy. Exports and purchases happen
 only in the configurator, with the user's own NeuronForm account.
@@ -38,14 +40,15 @@ one.
 
 1. Open “Customize” › “Connectors”.
 2. Choose “+ Add” and then “Add custom connector”.
-3. Enter the name `NeuronForm` and the MCP address.
-4. Choose “No sign in” as authentication.
-5. Select “Add”.
+3. Enter the name `NeuronForm` and the MCP address, and select “Continue”.
+4. Review the detected authentication settings and select “Continue”.
+5. Under “Authentication”, choose “No sign in”.
+6. Select “Add”.
 
 In a chat, switch the connector on under “+” › “Connectors”. In Team and
 Enterprise organizations an owner adds the connector under “Organization
-settings” › “Connectors”, and members connect it under “Customize” ›
-“Connectors”. Source: [Anthropic help article on custom connectors](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp).
+settings” › “Connectors” with “Add” › “Custom” › “Web”, and members connect
+it under “Customize” › “Connectors” with “Connect”. Source: [Anthropic help article on custom connectors](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp).
 
 ### ChatGPT
 
@@ -55,10 +58,12 @@ on first.
 
 1. Open ChatGPT Plugins.
 2. Choose the plus button and then “Add custom MCP server”.
-3. Enter the name `NeuronForm`, a short description, and the MCP address
-   under “Connection”.
-4. Choose no authentication and accept the risk notice.
-5. Select “Create as a plugin”.
+3. Enter the name `NeuronForm` and a short description.
+4. Under “Connection”, choose the public endpoint and enter the MCP address.
+5. Choose no authentication, review the risk notice, and select “I
+   understand and want to continue”.
+6. Select “Create as a plugin”, review the tools the server lists, and
+   install the plugin.
 
 In a new conversation, type `@` and choose NeuronForm. OpenAI changes these
 labels from time to time; its [developer documentation](https://developers.openai.com/apps-sdk/deploy/connect-chatgpt)
@@ -88,8 +93,8 @@ With `--scope project` the entry goes into the `.mcp.json` of the project.
 
 ### VS Code
 
-Run “MCP: Add Server” from the Command Palette, or add the server to
-`.vscode/mcp.json` in the workspace:
+Run “MCP: Add Server” from the Command Palette, choose “HTTP”, and enter
+the MCP address, or add the server to `.vscode/mcp.json` in the workspace:
 
 ```json
 {
@@ -102,8 +107,10 @@ Run “MCP: Add Server” from the Command Palette, or add the server to
 }
 ```
 
-Current versions of VS Code also read a portable `.mcp.json` at the root of
-the project, which lists the same entry under `mcpServers`.
+The portable files of VS Code, `~/.copilot/mcp-config.json` for every
+workspace and, with the experimental setting
+`chat.mcp.workspaceRootConfig.enabled`, `.mcp.json` at the root of the
+workspace, list the same entry under `mcpServers` instead of `servers`.
 
 ### Other clients
 
@@ -112,49 +119,61 @@ only the MCP address.
 
 ## Tools
 
-Every tool takes the optional argument `lang` (`de` or `en`, default `en`)
-for its summary and error texts. A failed call returns `isError: true` with
-an actionable message and one entry per refused field. The `design` argument
-is the complete design JSON; its schema is the resource
-`neuronform://schema/design`.
+Every tool takes the optional argument `lang` (`de` or `en`, default `en`).
+It sets the language of the summaries, the notices, and the lead sentences
+and hints of error messages; the guide texts and the detail texts of the
+design validation are English. A successful call returns a text block with a short
+summary followed by the JSON result, and the same result as
+`structuredContent`. A failed call returns `isError: true` with an
+actionable message and, in `structuredContent`, the `message` and the list
+`errors` with one entry per refused field (`field`, `message`, `hint`); an
+unknown tool name is a JSON-RPC error. The `design` argument is the complete
+design JSON; its schema is the resource `neuronform://schema/design`.
 
 | Tool | Purpose | Main arguments | Read-only |
 | --- | --- | --- | --- |
-| `search_places` | Finds places and addresses; returns name, lat, lon, and kind of each candidate | `query`, `limit` (1 to 10) | yes |
-| `create_design` | Compiles a short brief into a complete design with the configurator defaults; invalid values fall back to their defaults with a notice | `brief` | yes |
-| `edit_design` | Changes a design with brief fields (`changes`) and JSON Patch operations `add`, `replace`, `remove` (`patch`, at most 100) and returns the changed design; the service stores no design, so every call carries the complete design | `design`, `changes`, `patch` | yes |
-| `get_design_guide` | Explains one topic of the design JSON with the JSON schema of its fields | `topic` | yes |
-| `find_map_elements` | Lists roads and paths, buildings, areas, or ground regions of the design with a ready-to-insert fragment and its target path | `design`, `kind`, `name`, `class`, `near`, `limit`, `tile` | yes |
-| `edit_tiles` | Adds a tile at a compass side of a tile, or removes the tile there, and returns the changed design | `design`, `action`, `tile`, `direction` | yes |
+| `search_places` | Searches places, streets, and house numbers in the place directory of the server; returns name, lat, lon, and kind of each candidate | `query` (2 to 200 characters), `limit` (1 to 10, default 5) | yes |
+| `create_design` | Compiles a short brief into a complete design with the configurator defaults; invalid values fall back to their defaults with a notice naming the brief field | `brief` | yes |
+| `edit_design` | Changes a design with brief fields (`changes`) and JSON Patch operations `add`, `replace`, `remove` (`patch`, at most 100, applied after `changes`) and returns the changed design; at least one of the two is required; the service stores no design, so every call carries the complete design | `design`, `changes`, `patch` | yes |
+| `get_design_guide` | Explains one topic of the design JSON with the JSON schema of its fields | `topic` (default `overview`) | yes |
+| `find_map_elements` | Lists stretches of roads, paths, railways, and waterways between junctions (`line`), buildings, areas, or ground regions of the design with a ready-to-insert fragment and its target path; the fragments carry the colour `D8493F` | `design`, `kind` (`line`, `building`, `area`, `ground`), `name`, `class`, `near` (`lat`, `lon`), `limit` (1 to 50, default 10), `tile` | yes |
+| `edit_tiles` | Adds a tile at a compass side of a tile, or removes the tile there, and returns the changed design; tile 0 always stays | `design`, `action` (`add`, `remove`), `tile` (default 0), `direction` (`n`, `ne`, `e`, `se`, `s`, `sw`, `w`, `nw`) | yes |
 | `validate_design` | Checks a design against the request rules, the limits of anonymous use, and the restricted areas without generating it, and lists every tile with its centre and its free edges | `design` | yes |
-| `render_design` | Renders a JPEG of 1600 × 800 pixels with views from the north, east, south, and west beside the top view, or one view of 800 × 800 pixels (`view` `top` or `oblique` with `direction`), twice the size with `resolution` `high`; returns a summary with dimensions, triangles, colour groups, and tile positions, and opens the 3D viewer where the host supports MCP Apps | `design`, `view`, `direction`, `resolution` | yes |
+| `render_design` | Renders a JPEG of 1600 × 800 pixels with views from the north, east, south, and west beside the top view, or one view of 800 × 800 pixels (`view` `top`, or `oblique` with `direction`, default `sw`), twice the width and height with `resolution` `high`; returns a summary with dimensions, triangles, colour groups, warnings, and tile positions, the attribution, and a viewer link, and opens the 3D viewer in hosts that show MCP Apps or ChatGPT apps | `design`, `view` (`overview`, `top`, `oblique`; default `overview`), `direction`, `resolution` (`standard`, `high`) | yes |
 | `share_design` | Stores the design as an anonymous snapshot and returns a link, valid for 90 days, that opens it in the configurator | `design` | no (creates a snapshot, deletes nothing) |
-| `list_templates` | Lists the gallery templates; with a slug it returns the design of that template | `slug` | yes |
+| `list_templates` | Lists up to 50 published gallery templates with slug, title, description, tile count, and image URL; with a slug it returns the design of that template | `slug` | yes |
 
 Guide topics of `get_design_guide`: `overview`, `footprint`, `tiles`,
 `colors_and_layers`, `terrain`, `frame`, `hanging`, `paths`,
 `texts_and_shapes`, `inserts`, `edge_labels`, `element_takeover`, `limits`.
 
+A compass direction of `edit_tiles` selects the edge whose outward normal
+lies within 22.5° of it, so the directions follow the shape and the rotation:
+a hexagon without rotation offers `ne`, `e`, `se`, `sw`, `w`, and `nw`.
+`validate_design` and `render_design` list the free edges of every tile.
+
 ### Brief
 
-The brief of `create_design`; only the place, or `lat` and `lon`, is
-required.
+The brief of `create_design` and the `changes` of `edit_design`; in a
+brief only the place, or `lat` and `lon`, is required, and in `changes` an
+absent field keeps the design.
 
 | Field | Meaning | Default |
 | --- | --- | --- |
-| `place` | Place or address; with `lat` and `lon` only its name | required unless `lat` and `lon` |
-| `lat`, `lon` | Map centre in degrees; win over `place` | |
+| `place` | Place or address, 2 to 200 characters; the first match of the place search becomes the centre; with `lat` and `lon` only its name | required unless `lat` and `lon` |
+| `lat`, `lon` | Map centre in degrees, latitude −85.05 to 85.05, longitude −180 to 180; win over `place` | |
 | `width` | Map width in metres, 100 to 30,000 | 1500 |
 | `shape` | `hexagon`, `circle`, `square`, `rectangle` (0.75 times as high as wide), `polygon` | `hexagon` |
-| `sides` | Sides of `polygon`, 3 to 12 | 6 |
+| `sides` | Sides of `polygon`, 3 to 12; without `shape` it selects `polygon` | 6 |
 | `rotation` | Clockwise rotation in degrees, −360 to 360 | 0 |
-| `tiles` | Tile count, arranged compactly around the first tile; at most 3 for agents | 1 |
+| `tiles` | Tile count, arranged compactly around the first tile; at most 3 for agents; a circle takes one tile | 1 |
 | `model_width` | Printed width of one tile in millimetres, 50 to 300 | 200 |
-| `colors` | Colour template `single`, `two`, `four`, or an object with an optional `template` and colours `RRGGBB` by group (`ground`, `green`, `water`, `traffic`), layer kind, `frame`, or `label` | `four` |
+| `colors` | Colour template `single`, `two`, `four`, or an object with an optional `template` and colours `RRGGBB` or `#RRGGBB` by group (`ground`, `green`, `water`, `traffic`), by layer kind (`terrain`, `paved_areas`, `bare_ground`, `vegetation`, `agriculture`, `water_areas`, `sea`, `waterways`, `major_roads`, `local_roads`, `paths`, `railways`, `buildings`), `frame`, or `label`; a layer kind wins over its group, and every distinct colour is one filament | `four` |
 | `relief` | `true` real relief, `false` flat | automatic (flat below 300 m elevation difference) |
 | `exaggeration` | Vertical exaggeration, 0.1 to 10 | 1 |
 | `frame` | `none`, `integrated`, `separate` | `none` |
-| `label` | Edge text on the free edge of the first tile that faces south, up to 64 characters | none |
+| `label` | Edge text on the south-facing free edge of the first tile, or on its first free edge, up to 64 characters; a design with an edge text takes the new text into its first edge text | none |
+| `lang` | Language of the notices, `de` or `en`; when absent, the `lang` argument of the call applies | `en` |
 
 ### Workflow
 
@@ -181,7 +200,7 @@ required.
 
 The folder [examples](examples) holds the first three as JSON files. Each
 file names the prompt in English and German, the brief for `create_design`,
-the tool calls in their order, and the equivalent start link. The steps list
+the tool calls in their order, and the start link of its brief. The steps list
 the arguments besides `brief` and `design`: `create_design` receives the
 brief of the file, and every later call receives the current design.
 
@@ -196,22 +215,25 @@ https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=t
 
 The query parameters are the fields of the brief: `place`, `lat`, `lon`,
 `width`, `shape`, `sides`, `rotation`, `tiles`, `model_width`, `colors`,
-`relief`, `exaggeration`, `frame`, and `label`. Only `place`, or `lat` and
-`lon`, is required. Values are URL-encoded, such as `%20` for a space.
-Numbers are decimal numbers, and `relief` is `true` or `false`. The
-configurator builds the design with the compiler of `create_design` and
-names every value it adjusted.
+`relief`, `exaggeration`, `frame`, and `label`; `colors` takes a template
+name only, and the language of the notices is that of the configurator.
+Only `place`, or `lat` and `lon`, is required. Values are URL-encoded, such
+as `%20` for a space. Numbers are decimal numbers, and `relief` is `true` or
+`false`. The configurator builds the design with the compiler of
+`create_design` and names every value it adjusted; a link with a malformed
+value, or with a place the place search does not find, opens the
+configurator without the design and names the reason.
 
 ## Limits and fair use
 
 | Rule | Value |
 | --- | --- |
-| Policy | limits of a visitor without an account: up to 3 tiles, 20 custom paths, the ranges of the free offer |
-| Renders | 2,000 new renders per hour across all agents; renders of an unchanged design come from a 24-hour cache and do not count |
-| Per calling address | 600 render calls and 1,200 lookups (searches, briefs, element searches, tile edits, validations, template listings, viewer downloads) per hour; 500 new share links per 24 hours |
+| Policy | limits of a visitor without an account: up to 3 tiles, up to 20 custom lines, and the ranges of the brief; an unchanged gallery template of `list_templates` keeps its own tile count |
+| Renders | 2,000 newly generated models per hour across all agents; a render whose model is still cached does not count, and rendered designs stay cached for up to 24 hours |
+| Per calling address | 600 render calls and 1,200 lookups (searches, briefs, design edits, element searches, tile edits, validations, template listings, viewer downloads) per hour; 500 new share links per 24 hours |
 | Priority | visitors of the website take precedence; while they occupy the service, an agent receives “busy, retry in 10 s” |
 | Model size | models above about one million triangles are refused for agents; reduce the width or the tile count, or share the design and open it in the configurator |
-| Share links | anonymous snapshots valid for 90 days; the same design returns the same link while it has at least one day left |
+| Share links | anonymous snapshots valid for 90 days; a repeated call for an unchanged design returns the link issued before while it has at least one day of validity left and the service still holds it in its cache |
 | Viewer | each render issues a viewer link valid for one hour |
 | Restricted areas, countries | as for visitors of the website: military restricted areas cannot be printed, and the service is not offered in some countries |
 
@@ -222,10 +244,12 @@ permitted; see the terms below.
 
 A request contains the tool arguments, such as the place and the design, and
 the IP address of the calling system: the platform of the chat for Claude or
-ChatGPT, the user's own computer for Claude Code, Cursor, or VS Code.
-NeuronForm receives no account data and no other content of the chat. Place
-searches are answered by the place directory of the NeuronForm server, which
-it builds from OpenStreetMap data; the search terms reach no further service.
+ChatGPT, the user's own computer for Claude Code, Cursor, or VS Code. When a
+client connects, it names its client software and version, which NeuronForm
+counts for its usage statistics. NeuronForm receives no account data and no
+other content of the chat. Place searches are answered by the place
+directory of the NeuronForm server, which it builds from OpenStreetMap data;
+the search terms reach no further service.
 The providers of the assistants are responsible for the chat contents on
 their platforms.
 
@@ -273,20 +297,20 @@ Claude oder ChatGPT diese Modelle im Chat gestalten:
 
 - einen Ort finden;
 - einen Entwurf erstellen und ändern;
-- ihn als Bild und drehbare 3D-Ansicht zeigen;
+- ihn als Bild und, wo der Chat das unterstützt, als drehbare 3D-Ansicht zeigen;
 - einen Link übergeben, der genau diesen Entwurf im Konfigurator öffnet.
 
 Exportieren und kaufen können Agenten nicht; das geht nur im Konfigurator
 mit einem eigenen Konto.
 
 - **MCP-Adresse:** `https://neuronform.com/mcp` (Streamable HTTP, ohne Konto, ohne API-Schlüssel, kostenlos).
-- **Einrichtung:** In Claude unter „Customize“ › „Connectors“ › „+ Add“ › „Add custom connector“ mit „No sign in“. In Claude Code mit `claude mcp add --transport http neuronform https://neuronform.com/mcp`. Für ChatGPT, Cursor und VS Code siehe die Abschnitte oben oder die Seite [Für KI-Agenten](https://neuronform.com/agents/de).
-- **Werkzeuge:** `search_places`, `create_design`, `edit_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`).
+- **Einrichtung:** In Claude unter „Customize“ › „Connectors“ › „+ Add“ › „Add custom connector“, Authentifizierung „No sign in“. In Claude Code mit `claude mcp add --transport http neuronform https://neuronform.com/mcp`. Für ChatGPT, Cursor und VS Code siehe die Abschnitte oben oder die Seite [KI-Integration](https://neuronform.com/agents/de).
+- **Werkzeuge:** `search_places`, `create_design`, `edit_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`, Standard `en`) für Zusammenfassungen, Hinweise und Fehlermeldungen.
 - **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`
 - **Grenzen:**
-  - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln).
-  - Alle Agenten zusammen können 2.000 neue Ansichten pro Stunde berechnen.
+  - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln und 20 eigene Linien).
+  - Alle Agenten zusammen können pro Stunde 2.000 Modelle neu berechnen lassen; Ansichten eines noch zwischengespeicherten Modells zählen nicht.
   - Besucherinnen und Besucher der Website haben Vorrang.
-  - Modelle über etwa einer Million Dreiecken werden für Agenten nicht berechnet.
-- **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Verkaufsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
+  - Modelle mit mehr als etwa einer Million Dreiecken lehnt der Server für Agenten ab.
+- **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Allgemeine Geschäftsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
 - **Kartendaten und Quellen:** Jedes Ergebnis von `render_design` trägt im Feld `attribution` die Namensnennung der Datenquellen seines Modells, das Bild die der Karten- und Geländedaten. Alle Quellen mit Lizenz, Hinweis und Zitat listet das Quellenverzeichnis des Dienstes: [als JSON](https://neuronform.com/map/api/v1/data-sources) und auf der Seite [Lizenzen und Attribution](https://neuronform.com/licenses/de).
