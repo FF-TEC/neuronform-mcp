@@ -15,8 +15,8 @@
     { "tool": "create_design", "arguments": {} },
     {
       "tool": "find_map_elements",
-      "arguments": { "kind": "line", "name": "Getreidegasse" },
-      "then": "Append each returned fragment to its target customizations.custom_lines.paths; the fragments carry the colour D8493F (red)."
+      "arguments": { "kind": "line", "name": "Getreidegasse", "limit": 50 },
+      "then": "The street consists of several stretches between junctions, and limit 50 returns all of them; the default limit 10 returns only the first ten. Append each returned fragment to its target customizations.custom_lines.paths; the fragments carry the colour D8493F (red). A design without an account holds at most 20 custom lines."
     },
     { "tool": "validate_design", "arguments": {} },
     { "tool": "render_design", "arguments": {} },
