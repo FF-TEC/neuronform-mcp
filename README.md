@@ -136,16 +136,25 @@ design JSON; its schema is the resource `neuronform://schema/design`.
 | `create_design` | Compiles a short brief into a complete design with the configurator defaults; invalid values fall back to their defaults with a notice naming the brief field | `brief` | yes |
 | `edit_design` | Changes a design with brief fields (`changes`) and JSON Patch operations `add`, `replace`, `remove` (`patch`, at most 100, applied after `changes`) and returns the changed design; at least one of the two is required; the service stores no design, so every call carries the complete design | `design`, `changes`, `patch` | yes |
 | `get_design_guide` | Explains one topic of the design JSON with the JSON schema of its fields | `topic` (default `overview`) | yes |
-| `find_map_elements` | Lists stretches of roads, paths, railways, and waterways between junctions (`line`), buildings, areas, or ground regions of the design with a ready-to-insert fragment and its target path; the fragments carry the colour `D8493F` | `design`, `kind` (`line`, `building`, `area`, `ground`), `name`, `class`, `near` (`lat`, `lon`), `limit` (1 to 50, default 10), `tile` | yes |
+| `find_map_elements` | Lists stretches of roads, paths, railways, and waterways between junctions (`line`), buildings, areas, or ground regions of the design with a ready-to-insert fragment and its target path; the fragments carry the colour `D8493F`, and a building also carries the placement of a custom house that replaces it | `design`, `kind` (`line`, `building`, `area`, `ground`), `name`, `class`, `near` (`lat`, `lon`), `limit` (1 to 50, default 10), `tile` | yes |
 | `edit_tiles` | Adds a tile at a compass side of a tile, or removes the tile there, and returns the changed design; tile 0 always stays | `design`, `action` (`add`, `remove`), `tile` (default 0), `direction` (`n`, `ne`, `e`, `se`, `s`, `sw`, `w`, `nw`) | yes |
-| `validate_design` | Checks a design against the request rules, the limits of anonymous use, and the restricted areas without generating it, and lists every tile with its centre and its free edges | `design` | yes |
+| `validate_design` | Checks a design against the request rules, the limits of anonymous use, and the restricted areas without generating it, and lists every tile with its centre and its free edges and every custom house with its printed size and the details its print size leaves out | `design` | yes |
 | `render_design` | Renders a JPEG of 1600 × 800 pixels with views from the north, east, south, and west beside the top view, or one view of 800 × 800 pixels (`view` `top`, or `oblique` with `direction`, default `sw`), twice the width and height with `resolution` `high`; returns a summary with dimensions, triangles, colour groups, warnings, and tile positions, the attribution, and a viewer link, and opens the 3D viewer in hosts that show MCP Apps or ChatGPT apps | `design`, `view` (`overview`, `top`, `oblique`; default `overview`), `direction`, `resolution` (`standard`, `high`) | yes |
 | `share_design` | Stores the design as an anonymous snapshot and returns a link, valid for 90 days, that opens it in the configurator | `design` | no (creates a snapshot, deletes nothing) |
 | `list_templates` | Lists up to 50 published gallery templates with slug, title, description, tile count, and image URL; with a slug it returns the design of that template | `slug` | yes |
 
 Guide topics of `get_design_guide`: `overview`, `footprint`, `tiles`,
 `colors_and_layers`, `terrain`, `frame`, `hanging`, `paths`,
-`texts_and_shapes`, `inserts`, `edge_labels`, `element_takeover`, `limits`.
+`texts_and_shapes`, `inserts`, `edge_labels`, `element_takeover`,
+`details`, `focus_scaling`, `custom_houses`, `limits`.
+
+Besides the fields of the brief, a design takes every field of the
+configurator through `edit_design`: among them the generic details
+(roofs, windows, doors, and trees, with a facade style and a detail
+level, up to a map width of 3 km; topic `details`), focus scaling that
+magnifies one place and shrinks its surroundings toward the edge (topic
+`focus_scaling`), and up to five custom houses on free ground or in place
+of a building of the map (topic `custom_houses`).
 
 A compass direction of `edit_tiles` selects the edge whose outward normal
 lies within 22.5° of it, so the directions follow the shape and the rotation:
@@ -229,6 +238,8 @@ configurator without the design and names the reason.
 | Rule | Value |
 | --- | --- |
 | Policy | limits of a visitor without an account: up to 3 tiles, up to 20 custom lines, and the ranges of the brief; an unchanged gallery template of `list_templates` keeps its own tile count |
+| Generic details | roofs, windows, doors, and trees up to a map width of 3 km |
+| Custom houses | up to 5 per design; one house within its detail budget of 2 million triangles, which the service may set otherwise |
 | Renders | 2,000 newly generated models per hour across all agents; a render whose model is still cached does not count, and rendered designs stay cached for up to 24 hours |
 | Per calling address | 600 render calls and 1,200 lookups (searches, briefs, design edits, element searches, tile edits, validations, template listings, viewer downloads) per hour; 500 new share links per 24 hours |
 | Priority | visitors of the website take precedence; while they occupy the service, an agent receives “busy, retry in 10 s” |
@@ -309,6 +320,7 @@ mit einem eigenen Konto.
 - **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`
 - **Grenzen:**
   - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln und 20 eigene Linien).
+  - Generische Details (Dächer, Fenster, Türen und Bäume) gibt es bis 3 km Kartenbreite, eigene Häuser bis zu fünf je Entwurf mit einem Detailbudget von 2 Millionen Dreiecken je Haus.
   - Alle Agenten zusammen können pro Stunde 2.000 Modelle neu berechnen lassen; Ansichten eines noch zwischengespeicherten Modells zählen nicht.
   - Besucherinnen und Besucher der Website haben Vorrang.
   - Modelle mit mehr als etwa einer Million Dreiecken lehnt der Server für Agenten ab.
