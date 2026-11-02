@@ -54,14 +54,13 @@ it under “Customize” › “Connectors” with “Connect”. Source: [Anthr
 ### ChatGPT
 
 Whether you can add your own MCP servers depends on the ChatGPT plan and, in
-a workspace, on its settings; on some plans developer mode must be switched
-on first.
+a workspace, on its permissions and security settings.
 
-1. Open ChatGPT Plugins.
+1. Open [ChatGPT Plugins](https://chatgpt.com/plugins) in ChatGPT on the web.
 2. Choose the plus button and then “Add custom MCP server”.
-3. Enter the name `NeuronForm` and a short description.
+3. Enter the name `NeuronForm` and, optionally, a short description.
 4. Under “Connection”, choose the public endpoint and enter the MCP address.
-5. Choose no authentication, review the risk notice, and select “I
+5. Choose “No authentication”, review the risk warning, and select “I
    understand and want to continue”.
 6. Select “Create as a plugin”, review the tools the server lists, and
    install the plugin.
@@ -94,8 +93,20 @@ With `--scope project` the entry goes into the `.mcp.json` of the project.
 
 ### VS Code
 
-Run “MCP: Add Server” from the Command Palette, choose “HTTP”, and enter
-the MCP address, or add the server to `.vscode/mcp.json` in the workspace:
+Run “MCP: Add Server” from the Command Palette, choose “HTTP (HTTP or
+Server-Sent Events)”, enter the MCP address and the server ID `neuronform`,
+and choose a destination:
+
+- “Global” › “Copilot Global” writes `~/.copilot/mcp-config.json`, or
+  `$COPILOT_HOME/mcp-config.json` when `COPILOT_HOME` is set, for every
+  workspace.
+- `.mcp.json` at the root of the workspace shares the server with a team;
+  the guided flow offers it with the experimental setting
+  `chat.mcp.workspaceRootConfig.enabled`.
+- `.vscode/mcp.json` in the workspace, which the guided flow labels
+  deprecated.
+
+The entry in `.vscode/mcp.json`:
 
 ```json
 {
@@ -108,10 +119,9 @@ the MCP address, or add the server to `.vscode/mcp.json` in the workspace:
 }
 ```
 
-The portable files of VS Code, `~/.copilot/mcp-config.json` for every
-workspace and, with the experimental setting
-`chat.mcp.workspaceRootConfig.enabled`, `.mcp.json` at the root of the
-workspace, list the same entry under `mcpServers` instead of `servers`.
+The portable files `~/.copilot/mcp-config.json` and `.mcp.json` list the
+same entry under `mcpServers` instead of `servers`. Microsoft describes the
+destinations in its [documentation of MCP servers in VS Code](https://code.visualstudio.com/docs/copilot/customization/mcp-servers).
 
 ### Other clients
 
