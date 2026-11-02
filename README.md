@@ -22,6 +22,7 @@ https://neuronform.com/mcp
 | Item | Value |
 | --- | --- |
 | Transport | Streamable HTTP, stateless (one JSON response per request, no session) |
+| Request body | at most 2 MiB; a larger request is answered with HTTP 413 before any tool runs |
 | Authentication | none; no account, no API key |
 | Cost | free of charge |
 | Server name | `NeuronForm`, title “NeuronForm 3D map models” |
@@ -124,8 +125,9 @@ It sets the language of the summaries, the notices, and the lead sentences
 and hints of error messages; the guide texts and the detail texts of the
 design validation are English. A successful call returns a text block with a short
 summary followed by the JSON result, and the same result as
-`structuredContent`. A failed call returns `isError: true` with an
-actionable message and, in `structuredContent`, the `message` and the list
+`structuredContent`; `render_design` returns the JPEG image before the text
+block, and the text block of `get_design_guide` holds the guide text. A
+failed call returns `isError: true` with an actionable message and, in `structuredContent`, the `message` and the list
 `errors` with one entry per refused field (`field`, `message`, `hint`); an
 unknown tool name is a JSON-RPC error. The `design` argument is the complete
 design JSON; its schema is the resource `neuronform://schema/design`.
@@ -149,9 +151,11 @@ Guide topics of `get_design_guide`: `overview`, `footprint`, `tiles`,
 `details`, `focus_scaling`, `custom_houses`, `limits`.
 
 Besides the fields of the brief, a design takes every field of the
-configurator through `edit_design`: among them the generic details
-(roofs, windows, doors, and trees, with a facade style and a detail
-level, up to a map width of 3 km; topic `details`), focus scaling that
+configurator through `edit_design`: among them texts and shapes sized in
+millimetres of the print or in metres on the map (topic
+`texts_and_shapes`), the generic details (roofs, windows, doors, and
+trees, with a facade style and a detail level, up to a map width of 3 km;
+topic `details`), focus scaling that
 magnifies one place and shrinks its surroundings toward the edge (topic
 `focus_scaling`), and up to five custom houses on free ground or in place
 of a building of the map (topic `custom_houses`).
@@ -238,11 +242,12 @@ configurator without the design and names the reason.
 | Rule | Value |
 | --- | --- |
 | Policy | limits of a visitor without an account: up to 3 tiles, up to 20 custom lines, and the ranges of the brief; an unchanged gallery template of `list_templates` keeps its own tile count |
-| Generic details | roofs, windows, doors, and trees up to a map width of 3 km |
+| Generic details | roofs, windows, doors, and trees up to a map width of 3 km; above it, a design with a detail switched on is refused on the field `details` |
 | Custom houses | up to 5 per design; one house within its detail budget of 2 million triangles, which the service may set otherwise |
 | Renders | 2,000 newly generated models per hour across all agents; a render whose model is still cached does not count, and rendered designs stay cached for up to 24 hours |
 | Per calling address | 600 render calls and 1,200 lookups (searches, briefs, design edits, element searches, tile edits, validations, template listings, viewer downloads) per hour; 500 new share links per 24 hours |
 | Priority | visitors of the website take precedence; while they occupy the service, an agent receives “busy, retry in 10 s” |
+| Capacity | place searches, design validations, and images run within a bounded capacity that the website shares; a call beyond it fails with an error that names “the service accepts no further requests of this kind right now; try again in a moment” |
 | Model size | models above about one million triangles are refused for agents; reduce the width or the tile count, or share the design and open it in the configurator |
 | Share links | anonymous snapshots valid for 90 days; a repeated call for an unchanged design returns the link issued before while it has at least one day of validity left and the service still holds it in its cache |
 | Viewer | each render issues a viewer link valid for one hour |
@@ -250,6 +255,27 @@ configurator without the design and names the reason.
 
 Use is free of charge. Bulk retrieval and circumventing the limits are not
 permitted; see the terms below.
+
+## Maintenance
+
+While the operator puts the configurator, for visitors or for accounts, or
+the whole application into maintenance, the MCP address answers every
+request with HTTP 503 instead of a JSON-RPC response, so no tool runs and
+MCP clients report a failed request; the downloads of the 3D viewer answer
+the same way. The answer carries:
+
+- the header `Retry-After` with the seconds until the expected end of the
+  maintenance, at least 60 and at most 86,400, or 300 without an expected
+  end;
+- a problem JSON body of the type `tag:neuronform.com,2026:maintenance`
+  with the code `maintenance.configurator` or `maintenance.site` and the
+  object `maintenance` with `scope`, the messages of the operator
+  `message_de` and `message_en`, and the expected end `expected_end` (RFC
+  3339, UTC), each `null` when the operator set none.
+
+The switches in force are public at
+[neuronform.com/map/api/v1/maintenance](https://neuronform.com/map/api/v1/maintenance).
+Retry after the time that `Retry-After` names.
 
 ## Privacy and terms
 
@@ -314,15 +340,17 @@ Claude oder ChatGPT diese Modelle im Chat gestalten:
 Exportieren und kaufen können Agenten nicht; das geht nur im Konfigurator
 mit einem eigenen Konto.
 
-- **MCP-Adresse:** `https://neuronform.com/mcp` (Streamable HTTP, ohne Konto, ohne API-Schlüssel, kostenlos).
+- **MCP-Adresse:** `https://neuronform.com/mcp` (Streamable HTTP, Anfragen bis 2 MiB, ohne Konto, ohne API-Schlüssel, kostenlos).
 - **Einrichtung:** In Claude unter „Customize“ › „Connectors“ › „+ Add“ › „Add custom connector“, Authentifizierung „No sign in“. In Claude Code mit `claude mcp add --transport http neuronform https://neuronform.com/mcp`. Für ChatGPT, Cursor und VS Code siehe die Abschnitte oben oder die Seite [KI-Integration](https://neuronform.com/agents/de).
 - **Werkzeuge:** `search_places`, `create_design`, `edit_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`, Standard `en`) für Zusammenfassungen, Hinweise und Fehlermeldungen.
 - **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`
 - **Grenzen:**
   - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln und 20 eigene Linien).
-  - Generische Details (Dächer, Fenster, Türen und Bäume) gibt es bis 3 km Kartenbreite, eigene Häuser bis zu fünf je Entwurf mit einem Detailbudget von 2 Millionen Dreiecken je Haus.
+  - Generische Details (Dächer, Fenster, Türen und Bäume) gibt es bis 3 km Kartenbreite; einen breiteren Entwurf mit eingeschalteten Details lehnt der Server ab. Eigene Häuser gibt es bis zu fünf je Entwurf mit einem Detailbudget von 2 Millionen Dreiecken je Haus.
   - Alle Agenten zusammen können pro Stunde 2.000 Modelle neu berechnen lassen; Ansichten eines noch zwischengespeicherten Modells zählen nicht.
   - Besucherinnen und Besucher der Website haben Vorrang.
+  - Ortssuchen, Entwurfsprüfungen und Bilder laufen in einer begrenzten Kapazität, die die Website mitnutzt; ist sie ausgeschöpft, lehnt der Server weitere Aufrufe dieser Art vorübergehend ab.
   - Modelle mit mehr als etwa einer Million Dreiecken lehnt der Server für Agenten ab.
+- **Wartung:** Solange der Betreiber den Konfigurator oder die ganze Anwendung in Wartung schaltet, beantwortet die MCP-Adresse jede Anfrage mit HTTP 503 statt mit einer JSON-RPC-Antwort. Die Antwort nennt in `Retry-After` die Sekunden bis zum erwarteten Ende (ohne Ende 300) und im Objekt `maintenance` die Nachricht und das erwartete Ende; den Stand zeigt [neuronform.com/map/api/v1/maintenance](https://neuronform.com/map/api/v1/maintenance).
 - **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Allgemeine Geschäftsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
 - **Kartendaten und Quellen:** Jedes Ergebnis von `render_design` trägt im Feld `attribution` die Namensnennung der Datenquellen seines Modells, das Bild die der Karten- und Geländedaten. Alle Quellen mit Lizenz, Hinweis und Zitat listet das Quellenverzeichnis des Dienstes: [als JSON](https://neuronform.com/map/api/v1/data-sources) und auf der Seite [Lizenzen und Attribution](https://neuronform.com/licenses/de).
