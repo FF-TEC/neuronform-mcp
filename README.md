@@ -259,6 +259,7 @@ configurator without the design and names the reason.
 | Priority | visitors of the website take precedence; while they occupy the service, an agent receives “busy, retry in 10 s” |
 | Capacity | place searches, design validations, and images run within a bounded capacity that the website shares; a call beyond it fails with an error that names “the service accepts no further requests of this kind right now; try again in a moment” |
 | Model size | models above about one million triangles are refused for agents; reduce the width or the tile count, or share the design and open it in the configurator |
+| Map data | one model reads at most 128 MiB of decoded map data; `render_design` and `find_map_elements` refuse a design whose map area holds more, such as a wide map of a dense city, with “the selected map area holds more map data than one model can process”; a retry of the same design meets the same limit, while a smaller map area or fewer details, such as trees, windows, and doors switched off, reduce the map data |
 | Share links | anonymous snapshots valid for 90 days; a repeated call for an unchanged design returns the link issued before while it has at least one day of validity left and the service still holds it in its cache |
 | Viewer | each render issues a viewer link valid for one hour |
 | Restricted areas, countries | as for visitors of the website: military restricted areas cannot be printed, and the service is not offered in some countries |
@@ -361,6 +362,7 @@ mit einem eigenen Konto.
   - Besucherinnen und Besucher der Website haben Vorrang.
   - Ortssuchen, Entwurfsprüfungen und Bilder laufen in einer begrenzten Kapazität, die die Website mitnutzt; ist sie ausgeschöpft, lehnt der Server weitere Aufrufe dieser Art vorübergehend ab.
   - Modelle mit mehr als etwa einer Million Dreiecken lehnt der Server für Agenten ab.
+  - Ein Modell liest höchstens 128 MiB dekodierte Kartendaten; einen Kartenausschnitt mit mehr Kartendaten lehnt der Server ab, bis ein kleinerer Ausschnitt oder weniger Details gewählt sind.
 - **Wartung:** Solange der Betreiber den Konfigurator oder die ganze Anwendung in Wartung schaltet, beantwortet die MCP-Adresse jede Anfrage mit HTTP 503 statt mit einer JSON-RPC-Antwort. Die Antwort nennt in `Retry-After` die Sekunden bis zum erwarteten Ende (ohne Ende 300) und im Objekt `maintenance` die Nachricht und das erwartete Ende; den Stand zeigt [neuronform.com/map/api/v1/maintenance](https://neuronform.com/map/api/v1/maintenance).
 - **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Allgemeine Geschäftsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
 - **Kartendaten und Quellen:** Jedes Ergebnis von `render_design` trägt im Feld `attribution` die Namensnennung der Datenquellen seines Modells, das Bild die der Karten- und Geländedaten. Alle Quellen mit Lizenz, Hinweis und Zitat listet das Quellenverzeichnis des Dienstes: [als JSON](https://neuronform.com/map/api/v1/data-sources) und auf der Seite [Lizenzen und Attribution](https://neuronform.com/licenses/de).
