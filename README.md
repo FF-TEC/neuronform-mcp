@@ -22,6 +22,7 @@ https://neuronform.com/mcp
 | Item | Value |
 | --- | --- |
 | Transport | Streamable HTTP, stateless (one JSON response per request, no session) |
+| `Accept` header | `application/json`, `application/json, text/event-stream`, `*/*`, or none: every POST is answered with one JSON response; a request that accepts only `text/event-stream` is answered with HTTP 406 |
 | Request body | at most 2 MiB; a larger request is answered with HTTP 413 before any tool runs |
 | Authentication | none; no account, no API key |
 | Cost | free of charge |
@@ -227,6 +228,41 @@ the tool calls in their order, and the start link of its brief. The steps list
 the arguments besides `brief` and `design`: `create_design` receives the
 brief of the file, and every later call receives the current design.
 
+## Without an MCP client
+
+An assistant takes the first of these three ways that it has:
+
+1. The MCP tools of NeuronForm are connected: the assistant calls them.
+2. The assistant runs code with internet access, with a code tool, a
+   sandbox, or a terminal: it calls the MCP address directly over HTTP.
+   Every request is one JSON-RPC POST answered with one JSON response; the
+   server keeps no session, so no `initialize` is needed, and `tools/list`
+   lists the tools with their schemas. `create_design` returns the design
+   under `result.structuredContent.design`:
+
+   ```sh
+   curl -s https://neuronform.com/mcp \
+     -H 'content-type: application/json' \
+     -H 'accept: application/json, text/event-stream' \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_design","arguments":{"brief":{"place":"Hallstatt","width":3000,"shape":"hexagon","relief":true,"exaggeration":1.5}}}}'
+   ```
+
+   The assistant passes that design as `DESIGN` to the next calls:
+   `render_design` returns a JPEG of the model as base64 image content and a
+   link to the 3D viewer under `structuredContent.viewer`, valid for one
+   hour; `share_design` returns the link under `structuredContent.url` that
+   opens exactly this design in the configurator, valid for 90 days.
+
+   ```json
+   {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"render_design","arguments":{"design":DESIGN}}}
+   {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"share_design","arguments":{"design":DESIGN}}}
+   ```
+3. The assistant only reads web pages: it writes a start link with the
+   place and the settings (next section) and gives it to the person.
+   Opening the link builds the real model in the configurator with its 3D
+   preview; the assistant says that the model appears when the link is
+   opened and presents no picture of its own as a NeuronForm model.
+
 ## Start links for chats without MCP
 
 A chat without MCP can hand over a design as a start link of the
@@ -236,10 +272,21 @@ configurator:
 https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5
 ```
 
+With colours of its own, here sand ground, teal green areas, navy water, and
+coral roads:
+
+```
+https://neuronform.com/map/app?place=Ternitz&width=1800&shape=hexagon&colors=four&color_ground=f4e3c1&color_green=2a9d8f&color_water=1e3a8a&color_traffic=e76f51
+```
+
 The query parameters are the fields of the brief: `place`, `lat`, `lon`,
 `width`, `shape`, `sides`, `rotation`, `tiles`, `model_width`, `colors`,
 `relief`, `exaggeration`, `frame`, and `label`; `colors` takes a template
-name only, and the language of the notices is that of the configurator.
+name only. A parameter `color_<key>` sets the colour `RRGGBB`, without `#`,
+of one key of the `colors` object of the brief: a group `ground`, `green`,
+`water`, or `traffic`, a layer kind such as `buildings` or `sea`, `frame`,
+or `label`; these colours apply after the template. The language of the
+notices is that of the configurator.
 Only `place`, or `lat` and `lon`, is required. Values are URL-encoded, such
 as `%20` for a space. Numbers are decimal numbers, and `relief` is `true` or
 `false`. The configurator builds the design with the compiler of
@@ -259,7 +306,7 @@ configurator without the design and names the reason.
 | Priority | visitors of the website take precedence; while they occupy the service, an agent receives “busy, retry in 10 s” |
 | Capacity | place searches, design validations, and images run within a bounded capacity that the website shares; a call beyond it fails with an error that names “the service accepts no further requests of this kind right now; try again in a moment” |
 | Model size | models above about one million triangles are refused for agents; reduce the width or the tile count, or share the design and open it in the configurator |
-| Map data | one model reads at most 128 MiB of decoded map data; `render_design` and `find_map_elements` refuse a design whose map area holds more, such as a wide map of a dense city, with “the selected map area holds more map data than one model can process”; a retry of the same design meets the same limit, while a smaller map area or fewer details, such as trees, windows, and doors switched off, reduce the map data |
+| Map data | one model reads at most 2 GiB (2048 MiB) of decoded map data; `render_design` and `find_map_elements` refuse a design whose map area holds more, such as a wide map of a dense city, with “the selected map area holds more map data than one model can process”; a retry of the same design meets the same limit, while a smaller map area or fewer details, such as trees, windows, and doors switched off, reduce the map data |
 | Share links | anonymous snapshots valid for 90 days; a repeated call for an unchanged design returns the link issued before while it has at least one day of validity left and the service still holds it in its cache |
 | Viewer | each render issues a viewer link valid for one hour |
 | Restricted areas, countries | as for visitors of the website: military restricted areas cannot be printed, and the service is not offered in some countries |
@@ -354,7 +401,8 @@ mit einem eigenen Konto.
 - **MCP-Adresse:** `https://neuronform.com/mcp` (Streamable HTTP, Anfragen bis 2 MiB, ohne Konto, ohne API-Schlüssel, kostenlos).
 - **Einrichtung:** In Claude unter „Customize“ › „Connectors“ › „+ Add“ › „Add custom connector“, Authentifizierung „No sign in“. In Claude Code mit `claude mcp add --transport http neuronform https://neuronform.com/mcp`. Für ChatGPT, Cursor und VS Code siehe die Abschnitte oben oder die Seite [KI-Integration](https://neuronform.com/agents/de).
 - **Werkzeuge:** `search_places`, `create_design`, `edit_design`, `get_design_guide`, `find_map_elements`, `edit_tiles`, `validate_design`, `render_design`, `share_design`, `list_templates`. Jedes Werkzeug nimmt den optionalen Parameter `lang` (`de` oder `en`, Standard `en`) für Zusammenfassungen, Hinweise und Fehlermeldungen.
-- **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`
+- **Ohne MCP-Client:** Ein Assistent mit Code-Werkzeug, Sandbox oder Terminal ruft die MCP-Adresse direkt per HTTP auf: jede Anfrage ist ein JSON-RPC-POST mit einer JSON-Antwort, ohne Sitzung und ohne `initialize` (Beispiel mit `curl` im Abschnitt „Without an MCP client“). Der `Accept`-Header darf `application/json`, `application/json, text/event-stream` oder `*/*` nennen oder fehlen; nur `text/event-stream` allein beantwortet der Server mit HTTP 406.
+- **Startlinks ohne MCP:** `https://neuronform.com/map/app?place=Hallstatt&width=3000&shape=hexagon&relief=true&exaggeration=1.5`; eigene Farben setzen Parameter `color_<Schlüssel>` mit `RRGGBB` ohne `#` für eine Gruppe (`ground`, `green`, `water`, `traffic`), eine Ebene wie `buildings` oder `sea`, `frame` oder `label`, zum Beispiel `https://neuronform.com/map/app?place=Ternitz&width=1800&shape=hexagon&colors=four&color_ground=f4e3c1&color_green=2a9d8f&color_water=1e3a8a&color_traffic=e76f51`
 - **Grenzen:**
   - Es gelten die Grenzen eines Besuchs ohne Konto (bis zu 3 Kacheln und 20 eigene Linien).
   - Generische Details (Dächer, Fenster, Türen und Bäume) gibt es bis 3 km Kartenbreite; einen breiteren Entwurf mit eingeschalteten Details lehnt der Server ab. Eigene Häuser gibt es bis zu fünf je Entwurf mit einem Detailbudget von 2 Millionen Dreiecken je Haus.
@@ -362,7 +410,7 @@ mit einem eigenen Konto.
   - Besucherinnen und Besucher der Website haben Vorrang.
   - Ortssuchen, Entwurfsprüfungen und Bilder laufen in einer begrenzten Kapazität, die die Website mitnutzt; ist sie ausgeschöpft, lehnt der Server weitere Aufrufe dieser Art vorübergehend ab.
   - Modelle mit mehr als etwa einer Million Dreiecken lehnt der Server für Agenten ab.
-  - Ein Modell liest höchstens 128 MiB dekodierte Kartendaten; einen Kartenausschnitt mit mehr Kartendaten lehnt der Server ab, bis ein kleinerer Ausschnitt oder weniger Details gewählt sind.
+  - Ein Modell liest höchstens 2 GiB (2048 MiB) dekodierte Kartendaten; einen Kartenausschnitt mit mehr Kartendaten lehnt der Server ab, bis ein kleinerer Ausschnitt oder weniger Details gewählt sind.
 - **Wartung:** Solange der Betreiber den Konfigurator oder die ganze Anwendung in Wartung schaltet, beantwortet die MCP-Adresse jede Anfrage mit HTTP 503 statt mit einer JSON-RPC-Antwort. Die Antwort nennt in `Retry-After` die Sekunden bis zum erwarteten Ende (ohne Ende 300) und im Objekt `maintenance` die Nachricht und das erwartete Ende; den Stand zeigt [neuronform.com/map/api/v1/maintenance](https://neuronform.com/map/api/v1/maintenance).
 - **Datenschutz und Bedingungen:** [Datenschutzerklärung](https://neuronform.com/privacy/de#agents), [Allgemeine Geschäftsbedingungen, Abschnitt „Nutzung durch KI-Agenten“](https://neuronform.com/terms/de#agents).
 - **Kartendaten und Quellen:** Jedes Ergebnis von `render_design` trägt im Feld `attribution` die Namensnennung der Datenquellen seines Modells, das Bild die der Karten- und Geländedaten. Alle Quellen mit Lizenz, Hinweis und Zitat listet das Quellenverzeichnis des Dienstes: [als JSON](https://neuronform.com/map/api/v1/data-sources) und auf der Seite [Lizenzen und Attribution](https://neuronform.com/licenses/de).
