@@ -372,6 +372,11 @@ the notice its licence requires, and its citation:
 under the name `com.neuronform/mcp`, a namespace that the registry verifies
 against the domain neuronform.com. It follows the schema
 `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`.
+The registry lists the server, version 0.1.0, at
+[registry.modelcontextprotocol.io/v0/servers?search=com.neuronform](https://registry.modelcontextprotocol.io/v0/servers?search=com.neuronform).
+It was published with `mcp-publisher login http --domain neuronform.com`,
+whose Ed25519 public key neuronform.com serves at
+[/.well-known/mcp-registry-auth](https://neuronform.com/.well-known/mcp-registry-auth).
 
 ## Contact
 
